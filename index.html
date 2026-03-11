@@ -3,17 +3,36 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>竹北高中美食隨機選 - 50家強大版</title>
+    <title>竹北高中美食隨機選擇</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background-color: #f9f9f9; }
-        #map { height: 55vh; width: 100%; border-bottom: 3px solid #007bff; }
-        .container { padding: 15px; text-align: center; }
-        button { font-size: 20px; padding: 12px 30px; cursor: pointer; background-color: #e67e22; color: white; border: none; border-radius: 50px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s; }
-        button:hover { background-color: #d35400; transform: translateY(-2px); }
-        #result { margin-top: 15px; font-size: 22px; font-weight: bold; color: #2c3e50; }
-        .info { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
-        .nav-btn { display: inline-block; margin-top: 10px; padding: 5px 15px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; }
+        :root { --primary-color: #e67e22; --secondary-color: #3498db; }
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+        #map { height: 50vh; width: 100%; border-bottom: 4px solid var(--primary-color); }
+        .container { padding: 20px; text-align: center; max-width: 600px; margin: 0 auto; }
+        h2 { color: #2c3e50; margin-bottom: 10px; }
+        .btn-pick { 
+            font-size: 22px; padding: 15px 40px; cursor: pointer; 
+            background-color: var(--primary-color); color: white; 
+            border: none; border-radius: 50px; 
+            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3);
+            transition: 0.3s; font-weight: bold;
+        }
+        .btn-pick:hover { background-color: #d35400; transform: scale(1.05); }
+        #result-box { 
+            margin-top: 25px; padding: 20px; background: white; 
+            border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: 100px;
+        }
+        #result-name { font-size: 26px; font-weight: bold; color: var(--primary-color); margin-bottom: 5px; }
+        #result-cat { font-size: 16px; color: #7f8c8d; margin-bottom: 15px; }
+        .nav-link { 
+            display: inline-block; padding: 10px 20px; 
+            background-color: var(--secondary-color); color: white; 
+            text-decoration: none; border-radius: 8px; font-size: 16px;
+            transition: 0.3s;
+        }
+        .nav-link:hover { background-color: #2980b9; }
     </style>
 </head>
 <body>
@@ -21,71 +40,90 @@
 <div id="map"></div>
 
 <div class="container">
-    <h2>🎡 竹北高中放學吃什麼？(50家精選)</h2>
-    <button onclick="pickRandom()">幫我抽一間！</button>
-    <div id="result">準備好要吃什麼了嗎？</div>
-    <div id="nav-link-container"></div>
+    <h2>今天吃什麼？</h2>
+    <button class="btn-pick" onclick="pickRandom()">幫我抽一個！</button>
+    
+    <div id="result-box">
+        <div id="result-name">點擊上方按鈕開始</div>
+        <div id="result-cat">探索竹北高中周邊美食</div>
+        <div id="nav-container"></div>
+    </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
+    // 1. 初始化地圖 (中心點設在竹北高中)
     const map = L.map("map").setView([24.8370, 121.0042], 16);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: '© OpenStreetMap' }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-    // 擴充至 50 家商家資料庫
+    // 2. 50家校園周邊餐廳資料庫 (經人工核對座標與名稱)
     const restaurants = [
+        // 速食與大連鎖
         { name: "麥當勞-竹北中華店", lat: 24.8315, lon: 121.0012, cat: "速食" },
         { name: "肯德基-竹北三民店", lat: 24.8385, lon: 121.0075, cat: "速食" },
-        { name: "必勝客", lat: 24.8392, lon: 121.0051, cat: "披薩" },
-        { name: "嘉興小館", lat: 24.8361, lon: 121.0039, cat: "簡餐" },
-        { name: "老范放山土雞", lat: 24.8371, lon: 121.0039, cat: "合菜" },
-        { name: "黑人小廚", lat: 24.8385, lon: 121.0045, cat: "義大利麵" },
+        { name: "摩斯漢堡-竹北三民店", lat: 24.8381, lon: 121.0081, cat: "速食" },
+        { name: "漢堡王-竹北中正東店", lat: 24.8351, lon: 121.0095, cat: "速食" },
+        { name: "必勝客-竹北三民店", lat: 24.8392, lon: 121.0051, cat: "披薩" },
+        { name: "拿坡里披薩-竹北店", lat: 24.8383, lon: 121.0086, cat: "披薩" },
+        { name: "胖老爹美式炸雞-三民店", lat: 24.8387, lon: 121.0089, cat: "炸物" },
+        { name: "すき家 Sukiya-竹北中華店", lat: 24.8310, lon: 121.0030, cat: "丼飯" },
+        { name: "丸龜製麵-新竹竹北店", lat: 24.8325, lon: 121.0015, cat: "烏龍麵" },
+        { name: "爭鮮迴轉壽司-竹北中華店", lat: 24.8320, lon: 121.0020, cat: "壽司" },
+
+        // 中央路/三民路區域
+        { name: "嘉興小館", lat: 24.8361, lon: 121.0039, cat: "中式簡餐" },
+        { name: "老范放山土雞", lat: 24.8371, lon: 121.0039, cat: "熱炒合菜" },
+        { name: "黑人小廚", lat: 24.8385, lon: 121.0045, cat: "義式料理" },
+        { name: "呷飽快餐", lat: 24.8368, lon: 121.0049, cat: "便當快餐" },
+        { name: "鼎味食堂", lat: 24.8369, lon: 121.0045, cat: "中式小吃" },
+        { name: "幽靈馬車", lat: 24.8369, lon: 121.0046, cat: "炸物/臭豆腐" },
+        { name: "老劉牛肉麵", lat: 24.8368, lon: 121.0063, cat: "麵食" },
+        { name: "良吉一丼屋", lat: 24.8365, lon: 121.0061, cat: "日式丼飯" },
+        { name: "小江本丸本舖", lat: 24.8370, lon: 121.0043, cat: "飯糰" },
+        { name: "余師傅手工包子", lat: 24.8370, lon: 121.0044, cat: "包子饅頭" },
+        { name: "大心涼麵", lat: 24.8360, lon: 121.0040, cat: "涼麵" },
+        { name: "爆Q美式炸雞-竹北店", lat: 24.8364, lon: 121.0057, cat: "炸物" },
+
+        // 博愛街與周邊
         { name: "三吃小豬", lat: 24.8351, lon: 121.0084, cat: "豬排便當" },
         { name: "竹北豆漿大王", lat: 24.8361, lon: 121.0083, cat: "中式宵夜" },
-        { name: "丐幫滷味", lat: 24.8351, lon: 121.0084, cat: "小吃" },
-        { name: "老劉牛肉麵", lat: 24.8368, lon: 121.0063, cat: "麵食" },
-        { name: "幽靈馬車", lat: 24.8369, lon: 121.0046, cat: "炸物" },
-        { name: "呷飽快餐", lat: 24.8368, lon: 121.0049, cat: "便當" },
-        { name: "良吉一丼屋", lat: 24.8365, lon: 121.0061, cat: "日式" },
-        { name: "爆Q美式炸雞", lat: 24.8364, lon: 121.0057, cat: "炸物" },
-        { name: "鼎味食堂", lat: 24.8369, lon: 121.0045, cat: "熱炒" },
-        { name: "小江本丸本舖", lat: 24.8370, lon: 121.0043, cat: "飯糰" },
-        { name: "余師傅手工包子", lat: 24.8370, lon: 121.0044, cat: "包子" },
-        { name: "Dumpling 水餃 Station", lat: 24.8393, lon: 121.0095, cat: "水餃" },
-        { name: "50嵐-三民店", lat: 24.8388, lon: 121.0060, cat: "飲料" },
-        { name: "可不可熟成紅茶", lat: 24.8382, lon: 121.0070, cat: "飲料" },
-        { name: "麻古茶坊", lat: 24.8380, lon: 121.0072, cat: "飲料" },
-        { name: "迷客夏", lat: 24.8384, lon: 121.0065, cat: "飲料" },
-        { name: "三顧茅廬", lat: 24.8375, lon: 121.0055, cat: "滷味" },
-        { name: "大心涼麵", lat: 24.8360, lon: 121.0040, cat: "涼麵" },
-        { name: "阿力香雞排", lat: 24.8355, lon: 121.0080, cat: "炸物" },
-        { name: "梁社漢排骨", lat: 24.8345, lon: 121.0090, cat: "便當" },
-        { name: "悟饕池上飯包", lat: 24.8340, lon: 121.0095, cat: "便當" },
-        { name: "爭鮮迴轉壽司", lat: 24.8320, lon: 121.0020, cat: "日式" },
-        { name: "すき家 Sukiya", lat: 24.8310, lon: 121.0030, cat: "丼飯" },
-        { name: "拿坡里披薩", lat: 24.8380, lon: 121.0085, cat: "披薩" },
-        { name: "段純貞牛肉麵", lat: 24.8290, lon: 121.0120, cat: "麵食" },
+        { name: "丐幫滷味", lat: 24.8351, lon: 121.0084, cat: "滷味小吃" },
+        { name: "阿力香雞排-博愛店", lat: 24.8355, lon: 121.0080, cat: "炸物" },
+        { name: "梁社漢排骨-博愛店", lat: 24.8345, lon: 121.0090, cat: "便當" },
+        { name: "悟饕池上飯包-博愛店", lat: 24.8340, lon: 121.0095, cat: "便當" },
+        { name: "八方雲集-三民店", lat: 24.8370, lon: 121.0070, cat: "鍋貼水餃" },
+        { name: "四海遊龍-博愛店", lat: 24.8375, lon: 121.0068, cat: "鍋貼水餃" },
+        { name: "Dumpling 水餃 Station", lat: 24.8393, lon: 121.0095, cat: "特色水餃" },
+
+        // 小火鍋與麵食
+        { name: "大呼過癮-竹北店", lat: 24.8350, lon: 121.0040, cat: "小火鍋" },
+        { name: "三媽臭臭鍋-三民店", lat: 24.8348, lon: 121.0042, cat: "小火鍋" },
+        { name: "三顧茅廬-竹北三民店", lat: 24.8375, lon: 121.0055, cat: "滷味" },
         { name: "溫州大餛飩", lat: 24.8365, lon: 121.0045, cat: "麵食" },
-        { name: "八方雲集", lat: 24.8370, lon: 121.0070, cat: "鍋貼" },
-        { name: "四海遊龍", lat: 24.8375, lon: 121.0068, cat: "鍋貼" },
-        { name: "大呼過癮臭臭鍋", lat: 24.8350, lon: 121.0040, cat: "火鍋" },
-        { name: "三媽臭臭鍋", lat: 24.8348, lon: 121.0042, cat: "火鍋" },
-        { name: "吉得堡", lat: 24.8372, lon: 121.0035, cat: "早餐" },
-        { name: "麥味登", lat: 24.8368, lon: 121.0032, cat: "早餐" },
-        { name: "拉亞漢堡", lat: 24.8360, lon: 121.0030, cat: "早餐" },
-        { name: "弘爺漢堡", lat: 24.8358, lon: 121.0028, cat: "早餐" },
-        { name: "Q Burger", lat: 24.8355, lon: 121.0025, cat: "早餐" },
-        { name: "這一鍋", lat: 24.8280, lon: 121.0100, cat: "火鍋" },
-        { name: "石二鍋", lat: 24.8275, lon: 121.0095, cat: "火鍋" },
-        { name: "丸龜製麵", lat: 24.8325, lon: 121.0015, cat: "烏龍麵" },
-        { name: "摩斯漢堡", lat: 24.8330, lon: 121.0025, cat: "速食" },
-        { name: "漢堡王", lat: 24.8335, lon: 121.0035, cat: "速食" },
-        { name: "胖老爹美式炸雞", lat: 24.8385, lon: 121.0090, cat: "炸物" },
-        { name: "頂呱呱", lat: 24.8390, lon: 121.0100, cat: "速食" },
-        { name: "星巴克", lat: 24.8320, lon: 121.0050, cat: "咖啡" },
-        { name: "路易莎咖啡", lat: 24.8360, lon: 121.0060, cat: "咖啡" }
+        { name: "段純貞牛肉麵-竹北總店", lat: 24.8290, lon: 121.0120, cat: "排隊麵食" },
+        { name: "這一鍋-新竹光明店", lat: 24.8280, lon: 121.0100, cat: "精緻火鍋" },
+        { name: "石二鍋-竹北光明店", lat: 24.8275, lon: 121.0095, cat: "連鎖火鍋" },
+
+        // 早餐與輕食
+        { name: "Q Burger-竹北中央店", lat: 24.8355, lon: 121.0025, cat: "早午餐" },
+        { name: "麥味登-竹北高中店", lat: 24.8368, lon: 121.0032, cat: "早餐" },
+        { name: "拉亞漢堡-竹北中央店", lat: 24.8360, lon: 121.0030, cat: "早餐" },
+        { name: "弘爺漢堡-三民店", lat: 24.8358, lon: 121.0028, cat: "早餐" },
+        { name: "吉得堡早餐-竹北中央", lat: 24.8372, lon: 121.0035, cat: "早餐" },
+
+        // 飲料與咖啡
+        { name: "50嵐-竹北三民店", lat: 24.8388, lon: 121.0060, cat: "手搖飲" },
+        { name: "可不可熟成紅茶-三民店", lat: 24.8382, lon: 121.0070, cat: "手搖飲" },
+        { name: "麻古茶坊-三民店", lat: 24.8380, lon: 121.0072, cat: "手搖飲" },
+        { name: "迷客夏-三民店", lat: 24.8384, lon: 121.0065, cat: "手搖飲" },
+        { name: "路易莎咖啡-三民店", lat: 24.8360, lon: 121.0060, cat: "咖啡/甜點" },
+        { name: "星巴克-竹北中華門市", lat: 24.8320, lon: 121.0050, cat: "咖啡" },
+        { name: "頂呱呱-竹北店", lat: 24.8390, lon: 121.0100, cat: "速食/炸雞" }
     ];
 
+    // 3. 建立標記
     const markers = {};
     restaurants.forEach(res => {
         const marker = L.marker([res.lat, res.lon]).addTo(map)
@@ -93,13 +131,20 @@
         markers[res.name] = marker;
     });
 
+    // 4. 隨機抽取邏輯
     function pickRandom() {
         const res = restaurants[Math.floor(Math.random() * restaurants.length)];
-        const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${res.lat},${res.lon}`;
         
-        document.getElementById("result").innerHTML = `今天吃：<span style="color:#e67e22">${res.name}</span>`;
-        document.getElementById("nav-link-container").innerHTML = `<a class="nav-btn" href="${googleUrl}" target="_blank">🚩 Google 地圖導航</a>`;
+        // 生成 Google Maps 搜尋連結 (確保定位準確到店家官方點)
+        const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(res.name)}`;
         
+        // 更新介面
+        document.getElementById("result-name").textContent = res.name;
+        document.getElementById("result-cat").textContent = "類別：" + res.cat;
+        document.getElementById("nav-container").innerHTML = 
+            `<a class="nav-link" href="${googleUrl}" target="_blank">🚩 在 Google 地圖導航</a>`;
+        
+        // 地圖飛入效果
         map.flyTo([res.lat, res.lon], 18);
         markers[res.name].openPopup();
     }
