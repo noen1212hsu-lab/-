@@ -2,101 +2,107 @@
 <html lang="zh-TW">
 <head>
     <meta charset="utf-8" />
-    <title>竹北高中附近美食地圖與隨機選擇器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竹北高中美食隨機選 - 50家強大版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body {
-            font-family: "Microsoft JhengHei", sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        #map {
-            height: 70vh; /* 地圖高度佔螢幕 70% [cite: 627] */
-            width: 100%;
-        }
-        .random-picker {
-            text-align: center;
-            padding: 30px;
-            background-color: #f8f9fa;
-        }
-        h1, h2 {
-            margin: 20px 0;
-        }
-        button {
-            font-size: 20px;
-            padding: 10px 20px;
-            cursor: pointer;
-        }
-        #result {
-            margin-top: 20px;
-            font-size: 24px;
-            color: #d9534f;
-        }
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background-color: #f9f9f9; }
+        #map { height: 55vh; width: 100%; border-bottom: 3px solid #007bff; }
+        .container { padding: 15px; text-align: center; }
+        button { font-size: 20px; padding: 12px 30px; cursor: pointer; background-color: #e67e22; color: white; border: none; border-radius: 50px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s; }
+        button:hover { background-color: #d35400; transform: translateY(-2px); }
+        #result { margin-top: 15px; font-size: 22px; font-weight: bold; color: #2c3e50; }
+        .info { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
+        .nav-btn { display: inline-block; margin-top: 10px; padding: 5px 15px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <h2 style="text-align: center;">竹北高中附近美食地圖</h2>
-    <div id="map"></div>
+<div id="map"></div>
 
-    <div class="random-picker">
-        <h1>今天吃什麼?</h1>
-        <button onclick="pickRandomRestaurant()">選一間餐廳</button>
-        <div id="result"></div>
-    </div>
+<div class="container">
+    <h2>🎡 竹北高中放學吃什麼？(50家精選)</h2>
+    <button onclick="pickRandom()">幫我抽一間！</button>
+    <div id="result">準備好要吃什麼了嗎？</div>
+    <div id="nav-link-container"></div>
+</div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        // 1. 初始化地圖，設定中心點為竹北高中附近 [cite: 653]
-        const map = L.map("map").setView([24.8370219, 121.0042495], 15);
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    const map = L.map("map").setView([24.8370, 121.0042], 16);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: '© OpenStreetMap' }).addTo(map);
 
-        // 2. 加入 OpenStreetMap 底圖 [cite: 654-657]
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '地圖資料 &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> 貢獻者'
-        }).addTo(map);
+    // 擴充至 50 家商家資料庫
+    const restaurants = [
+        { name: "麥當勞-竹北中華店", lat: 24.8315, lon: 121.0012, cat: "速食" },
+        { name: "肯德基-竹北三民店", lat: 24.8385, lon: 121.0075, cat: "速食" },
+        { name: "必勝客", lat: 24.8392, lon: 121.0051, cat: "披薩" },
+        { name: "嘉興小館", lat: 24.8361, lon: 121.0039, cat: "簡餐" },
+        { name: "老范放山土雞", lat: 24.8371, lon: 121.0039, cat: "合菜" },
+        { name: "黑人小廚", lat: 24.8385, lon: 121.0045, cat: "義大利麵" },
+        { name: "三吃小豬", lat: 24.8351, lon: 121.0084, cat: "豬排便當" },
+        { name: "竹北豆漿大王", lat: 24.8361, lon: 121.0083, cat: "中式宵夜" },
+        { name: "丐幫滷味", lat: 24.8351, lon: 121.0084, cat: "小吃" },
+        { name: "老劉牛肉麵", lat: 24.8368, lon: 121.0063, cat: "麵食" },
+        { name: "幽靈馬車", lat: 24.8369, lon: 121.0046, cat: "炸物" },
+        { name: "呷飽快餐", lat: 24.8368, lon: 121.0049, cat: "便當" },
+        { name: "良吉一丼屋", lat: 24.8365, lon: 121.0061, cat: "日式" },
+        { name: "爆Q美式炸雞", lat: 24.8364, lon: 121.0057, cat: "炸物" },
+        { name: "鼎味食堂", lat: 24.8369, lon: 121.0045, cat: "熱炒" },
+        { name: "小江本丸本舖", lat: 24.8370, lon: 121.0043, cat: "飯糰" },
+        { name: "余師傅手工包子", lat: 24.8370, lon: 121.0044, cat: "包子" },
+        { name: "Dumpling 水餃 Station", lat: 24.8393, lon: 121.0095, cat: "水餃" },
+        { name: "50嵐-三民店", lat: 24.8388, lon: 121.0060, cat: "飲料" },
+        { name: "可不可熟成紅茶", lat: 24.8382, lon: 121.0070, cat: "飲料" },
+        { name: "麻古茶坊", lat: 24.8380, lon: 121.0072, cat: "飲料" },
+        { name: "迷客夏", lat: 24.8384, lon: 121.0065, cat: "飲料" },
+        { name: "三顧茅廬", lat: 24.8375, lon: 121.0055, cat: "滷味" },
+        { name: "大心涼麵", lat: 24.8360, lon: 121.0040, cat: "涼麵" },
+        { name: "阿力香雞排", lat: 24.8355, lon: 121.0080, cat: "炸物" },
+        { name: "梁社漢排骨", lat: 24.8345, lon: 121.0090, cat: "便當" },
+        { name: "悟饕池上飯包", lat: 24.8340, lon: 121.0095, cat: "便當" },
+        { name: "爭鮮迴轉壽司", lat: 24.8320, lon: 121.0020, cat: "日式" },
+        { name: "すき家 Sukiya", lat: 24.8310, lon: 121.0030, cat: "丼飯" },
+        { name: "拿坡里披薩", lat: 24.8380, lon: 121.0085, cat: "披薩" },
+        { name: "段純貞牛肉麵", lat: 24.8290, lon: 121.0120, cat: "麵食" },
+        { name: "溫州大餛飩", lat: 24.8365, lon: 121.0045, cat: "麵食" },
+        { name: "八方雲集", lat: 24.8370, lon: 121.0070, cat: "鍋貼" },
+        { name: "四海遊龍", lat: 24.8375, lon: 121.0068, cat: "鍋貼" },
+        { name: "大呼過癮臭臭鍋", lat: 24.8350, lon: 121.0040, cat: "火鍋" },
+        { name: "三媽臭臭鍋", lat: 24.8348, lon: 121.0042, cat: "火鍋" },
+        { name: "吉得堡", lat: 24.8372, lon: 121.0035, cat: "早餐" },
+        { name: "麥味登", lat: 24.8368, lon: 121.0032, cat: "早餐" },
+        { name: "拉亞漢堡", lat: 24.8360, lon: 121.0030, cat: "早餐" },
+        { name: "弘爺漢堡", lat: 24.8358, lon: 121.0028, cat: "早餐" },
+        { name: "Q Burger", lat: 24.8355, lon: 121.0025, cat: "早餐" },
+        { name: "這一鍋", lat: 24.8280, lon: 121.0100, cat: "火鍋" },
+        { name: "石二鍋", lat: 24.8275, lon: 121.0095, cat: "火鍋" },
+        { name: "丸龜製麵", lat: 24.8325, lon: 121.0015, cat: "烏龍麵" },
+        { name: "摩斯漢堡", lat: 24.8330, lon: 121.0025, cat: "速食" },
+        { name: "漢堡王", lat: 24.8335, lon: 121.0035, cat: "速食" },
+        { name: "胖老爹美式炸雞", lat: 24.8385, lon: 121.0090, cat: "炸物" },
+        { name: "頂呱呱", lat: 24.8390, lon: 121.0100, cat: "速食" },
+        { name: "星巴克", lat: 24.8320, lon: 121.0050, cat: "咖啡" },
+        { name: "路易莎咖啡", lat: 24.8360, lon: 121.0060, cat: "咖啡" }
+    ];
 
-        // 3. 餐廳資料庫 [cite: 659-675]
-        const restaurants = [
-            { name: "必勝客", lat: 24.8392334, lon: 121.0050884 },
-            { name: "竹北豆漿大王", lat: 24.8361431, lon: 121.0082818 },
-            { name: "丐幫滷味", lat: 24.8351138, lon: 121.0084183 },
-            { name: "東家便當", lat: 24.8387818, lon: 121.0054488 },
-            { name: "3Q脆皮雞排", lat: 24.8385188, lon: 121.0054782 },
-            { name: "良吉一丼屋", lat: 24.8365594, lon: 121.0061232 },
-            { name: "爆Q美式炸雞", lat: 24.8364907, lon: 121.0057458 },
-            { name: "老劉牛肉麵", lat: 24.8368114, lon: 121.0063425 },
-            { name: "呷飽快餐", lat: 24.8368457, lon: 121.0049176 },
-            { name: "竹間精緻鍋物", lat: 24.8371388, lon: 121.0049485 },
-            { name: "幽靈馬車", lat: 24.8369568, lon: 121.0045736 },
-            { name: "余師傅手工包子養生饅頭", lat: 24.8370184, lon: 121.0044132 },
-            { name: "鼎味食堂", lat: 24.8369887, lon: 121.0045097 },
-            { name: "小江本丸本舖", lat: 24.8370539, lon: 121.0043127 },
-            { name: "老范放山土雞", lat: 24.8370915, lon: 121.0038543 },
-            { name: "Dumpling 水餃 Station", lat: 24.8392999, lon: 121.0095692 }
-        ];
+    const markers = {};
+    restaurants.forEach(res => {
+        const marker = L.marker([res.lat, res.lon]).addTo(map)
+            .bindPopup(`<b>${res.name}</b><br>類別：${res.cat}`);
+        markers[res.name] = marker;
+    });
 
-        // 4. 在地圖上建立標記 [cite: 676-681]
-        restaurants.forEach((loc) => {
-            L.marker([loc.lat, loc.lon]).addTo(map).bindPopup(loc.name);
-        });
-
-        // 5. 隨機選擇功能 [cite: 683-693]
-        function pickRandomRestaurant() {
-            const randomIndex = Math.floor(Math.random() * restaurants.length);
-            const choice = restaurants[randomIndex];
-            
-            // 更新文字顯示
-            document.getElementById("result").textContent = "👉 今天吃：" + choice.name;
-            
-            // 移動地圖視角
-            map.setView([choice.lat, choice.lon], 17);
-            
-            // 自動開啟彈出視窗
-            L.popup()
-                .setLatLng([choice.lat, choice.lon])
-                .setContent(choice.name)
-                .openOn(map);
-        }
-    </script>
+    function pickRandom() {
+        const res = restaurants[Math.floor(Math.random() * restaurants.length)];
+        const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${res.lat},${res.lon}`;
+        
+        document.getElementById("result").innerHTML = `今天吃：<span style="color:#e67e22">${res.name}</span>`;
+        document.getElementById("nav-link-container").innerHTML = `<a class="nav-btn" href="${googleUrl}" target="_blank">🚩 Google 地圖導航</a>`;
+        
+        map.flyTo([res.lat, res.lon], 18);
+        markers[res.name].openPopup();
+    }
+</script>
 </body>
 </html>
